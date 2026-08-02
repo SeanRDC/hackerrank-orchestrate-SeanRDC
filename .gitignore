@@ -1,0 +1,16 @@
+# Ignore environment variables and secrets
+.env
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore virtual environments (if you create one)
+venv/
+env/
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore the hackathon log file (just in case you accidentally create it in the repo)
+log.txt
