@@ -27,8 +27,8 @@ class RouterAgent:
             "Make personalized decisions based on the context provided. Always return valid JSON matching the schema."
         )
 
-    def process_message(self, message_row, user_context=""):
-        """Asks Gemini to route a single message."""
+    def process_message(self, message_row, user_context="", business_context="", group_context="", media_path=None):
+        """Asks Gemini to route a single message with rich context and media."""
         
         # Construct the prompt with the specific message details
         prompt = f"""
@@ -45,14 +45,27 @@ class RouterAgent:
         
         RECEIVER CONTEXT:
         {user_context}
+
+        BUSINESS CONTEXT:
+        {business_context}
+
+        GROUP CONTEXT:
+        {group_context}
         
         Decide the action, message_type, provide a reason, confidence, and any evidence_message_ids ('none' for now).
         """
         
+        contents_list = [prompt]
+        
+        if media_path and os.path.exists(media_path):
+            print(f"    [Uploading media file to Gemini: {media_path}]")
+            media_file = self.client.files.upload(file=media_path)
+            contents_list.append(media_file)
+
         # Call Gemini and force the output to match our Pydantic schema
         response = self.client.models.generate_content(
             model=self.model_name,
-            contents=prompt,
+            contents=contents_list,
             config=genai.types.GenerateContentConfig(
                 system_instruction=self.system_instruction,
                 response_mime_type="application/json",
@@ -70,32 +83,51 @@ def main():
     print("Loading datasets...")
     try:
         messages_df = pd.read_csv("dataset/messages.csv")
-        users_df = pd.read_csv("dataset/users.csv")
-        # We set user_id as index so we can look up users instantly
-        users_df.set_index("user_id", inplace=True) 
+        users_df = pd.read_csv("dataset/users.csv").set_index("user_id")
+        groups_df = pd.read_csv("dataset/groups.csv").set_index("group_id")
+        business_df = pd.read_csv("dataset/business_accounts.csv").set_index("business_id")
+        images_df = pd.read_csv("dataset/images.csv").set_index("image_id")
+        voice_df = pd.read_csv("dataset/voice_notes.csv").set_index("voice_note_id")
     except FileNotFoundError as e:
         print(f"Error: Could not find dataset files. Make sure you are running from the project root. ({e})")
         return
 
     agent = RouterAgent()
     
-    # Test first 3 messages
-    print("\n--- Testing the Bouncer on the first 3 messages ---\n")
+    # Test the first 15 messages to include audio and img
+    print("\n--- Testing the Bouncer on the first 15 messages ---\n")
     
-    for index, row in messages_df.head(3).iterrows():
+    for index, row in messages_df.head(15).iterrows():
         print(f"Processing {row['message_id']}...")
         
-        user_context = "No specific user context found."
-        user_id = row['user_id']
-        if user_id in users_df.index:
-            user_data = users_df.loc[user_id]
-            user_context = f"User has Do Not Disturb window: {user_data.get('do_not_disturb_window', 'None')}"
-            
+        # Build Contexts safely
+        user_context = "None"
+        if pd.notna(row['user_id']) and row['user_id'] in users_df.index:
+            user_context = str(users_df.loc[row['user_id']].to_dict())
+
+        business_context = "None"
+        if pd.notna(row['business_id']) and row['business_id'] in business_df.index:
+            business_context = str(business_df.loc[row['business_id']].to_dict())
+
+        group_context = "None"
+        if pd.notna(row['group_id']) and row['group_id'] in groups_df.index:
+            group_context = str(groups_df.loc[row['group_id']].to_dict())
+
+        # Resolve Media Path
+        media_path = None
+        if row['media_type'] == 'image' and pd.notna(row['media_id']):
+            if row['media_id'] in images_df.index:
+                media_path = "dataset/" + images_df.loc[row['media_id']]['file_path']
+        elif row['media_type'] == 'voice' and pd.notna(row['media_id']):
+            if row['media_id'] in voice_df.index:
+                media_path = "dataset/" + voice_df.loc[row['media_id']]['file_path']
+
         # Get the AI's decision
         try:
-            decision = agent.process_message(row, user_context)
+            decision = agent.process_message(row, user_context, business_context, group_context, media_path)
             
-            print(f"  TEXT:   {row['message_text'][:60]}...")
+            print(f"  TEXT:   {str(row['message_text'])[:60]}...") 
+            print(f"  MEDIA:  {media_path}")
             print(f"  ACTION: {decision['action'].upper()} (Type: {decision['message_type']})")
             print(f"  REASON: {decision['reason']}")
             print("-" * 50)
