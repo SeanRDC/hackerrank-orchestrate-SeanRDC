@@ -66,7 +66,6 @@ class RouterAgent:
             media_file = self.client.files.upload(file=media_path)
             contents_list.append(media_file)
 
-        # Call Gemini and force the output to match schema
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=contents_list,
@@ -93,7 +92,6 @@ def main():
         images_df = pd.read_csv("dataset/images.csv").set_index("image_id")
         voice_df = pd.read_csv("dataset/voice_notes.csv").set_index("voice_note_id")
         
-        # Load and merge history to get message text + user reactions
         history_df = pd.read_csv("dataset/message_history.csv")
         events_df = pd.read_csv("dataset/message_events.csv")
         merged_history = pd.merge(history_df, events_df, on=['message_id', 'user_id'], how='left')
@@ -104,10 +102,14 @@ def main():
 
     agent = RouterAgent()
     
-    print("\n--- Testing the Bouncer on the first 15 messages ---\n")
+    # Save to output.csv
+    print("\n--- Processing all messages for final submission ---\n")
     
-    for index, row in messages_df.head(15).iterrows():
-        print(f"Processing {row['message_id']}...")
+    results = []
+    total_messages = len(messages_df)
+    
+    for index, row in messages_df.iterrows():
+        print(f"Processing {index + 1}/{total_messages}: {row['message_id']}...")
         
         user_context = "None"
         if pd.notna(row['user_id']) and row['user_id'] in users_df.index:
@@ -152,15 +154,34 @@ def main():
         try:
             decision = agent.process_message(row, user_context, business_context, group_context, history_context, media_path)
             
-            print(f"  TEXT:   {str(row['message_text'])[:60]}...") 
-            print(f"  MEDIA:  {media_path}")
-            print(f"  ACTION: {decision['action'].upper()} (Type: {decision['message_type']})")
-            print(f"  REASON: {decision['reason']}")
-            print(f"  EVIDENCE: {decision['evidence_message_ids']} (Confidence: {decision['confidence']})")
-            print("-" * 50)
+            # Store result for output
+            results.append({
+                "message_id": row['message_id'],
+                "action": decision['action'].lower(),
+                "message_type": decision['message_type'].lower(),
+                "reason": decision['reason'],
+                "confidence": decision['confidence'],
+                "evidence_message_ids": decision['evidence_message_ids']
+            })
             
         except Exception as e:
             print(f"  Error processing message: {e}")
+            results.append({
+                "message_id": row['message_id'],
+                "action": "digest",
+                "message_type": "unknown",
+                "reason": f"API Error: {e}",
+                "confidence": 0.0,
+                "evidence_message_ids": "none"
+            })
+
+    print("\nSaving results to dataset/output.csv...")
+    output_df = pd.DataFrame(results)
+    
+    output_df = output_df[["message_id", "action", "message_type", "reason", "confidence", "evidence_message_ids"]]
+    output_df.to_csv("dataset/output.csv", index=False)
+    
+    print("Done! You are ready to zip and submit.")
 
 if __name__ == "__main__":
     main()
