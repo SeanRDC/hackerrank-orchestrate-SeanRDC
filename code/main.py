@@ -25,7 +25,10 @@ class RouterAgent:
             "You are an AI notification router for WhatsApp. Your job is to decide whether an incoming message "
             "should 'notify' (interrupt the user now), 'digest' (wait for later), or 'mute' (suppress as unwanted/unsafe). "
             "Use the provided context (User, Business, Group, History) to make a personalized decision. "
-            "If the message is a scam, phishing attempt, or unsafe, always action as 'mute' and set type to 'scam' or 'spam'. "
+            "CRITICAL RULES:\n"
+            "1. SCAMS: If the message is a scam, phishing attempt, or unsafe, always action as 'mute' and set type to 'scam' or 'spam'.\n"
+            "2. DND OVERRIDE: If the message is a critical safety, security, or infrastructure alert (e.g., fire alarms, water supply issues, immediate physical risks), it MUST bypass Do-Not-Disturb (DND) hours and be routed to 'notify'.\n"
+            "3. EVIDENCE STRICTNESS: For `evidence_message_ids`, you MUST ONLY use the exact 'ID' strings explicitly provided in the HISTORICAL INTERACTION EVIDENCE block. Never invent, combine, or hallucinate IDs. If no relevant history is provided, return 'none'.\n"
             "Your output must exactly match the required JSON schema."
         )
 
@@ -74,7 +77,7 @@ class RouterAgent:
                 system_instruction=self.system_instruction,
                 response_mime_type="application/json",
                 response_schema=RoutingDecision,
-                temperature=0.2,
+                temperature=0.1,
             ),
         )
         
@@ -156,14 +159,13 @@ def main():
                 # Store result for our output
                 results.append({
                     "message_id": row['message_id'],
-                    "action": decision['action'].lower(),
+                    "action": decision['action'].lower(), # HackerRank expects lowercase
                     "message_type": decision['message_type'].lower(),
                     "reason": decision['reason'],
                     "confidence": decision['confidence'],
                     "evidence_message_ids": decision['evidence_message_ids']
                 })
                 
-                # Give the API a 4-second breather to respect the 15 Requests Per Minute free tier limit
                 time.sleep(4)
                 break
                 
@@ -186,7 +188,6 @@ def main():
                         })
                 else:
                     print(f"  Error processing message: {e}")
-                    # Fallback row for standard errors
                     results.append({
                         "message_id": row['message_id'],
                         "action": "digest",
@@ -195,16 +196,14 @@ def main():
                         "confidence": 0.0,
                         "evidence_message_ids": "none"
                     })
-                    break
+                    break 
 
     # Save to output.csv
     print("\nSaving results to dataset/output.csv...")
     output_df = pd.DataFrame(results)
     
-    # Arranged columns
     output_df = output_df[["message_id", "action", "message_type", "reason", "confidence", "evidence_message_ids"]]
     output_df.to_csv("dataset/output.csv", index=False)
-    
 
 if __name__ == "__main__":
     main()
