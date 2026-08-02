@@ -20,14 +20,15 @@ class RouterAgent:
         self.client = genai.Client()
         self.model_name = "gemini-3.5-flash-lite"
         
-        # System instructions set the "personality" and strict rules
         self.system_instruction = (
             "You are an AI notification router for WhatsApp. Your job is to decide whether an incoming message "
             "should 'notify' (interrupt the user now), 'digest' (wait for later), or 'mute' (suppress as unwanted/unsafe). "
-            "Make personalized decisions based on the context provided. Always return valid JSON matching the schema."
+            "Use the provided context (User, Business, Group, History) to make a personalized decision. "
+            "If the message is a scam, phishing attempt, or unsafe, always action as 'mute' and set type to 'scam' or 'spam'. "
+            "Your output must exactly match the required JSON schema."
         )
 
-    def process_message(self, message_row, user_context="", business_context="", group_context="", media_path=None):
+    def process_message(self, message_row, user_context="", business_context="", group_context="", history_context="", media_path=None):
         """Asks Gemini to route a single message with rich context and media."""
         
         # Construct the prompt with the specific message details
@@ -52,6 +53,9 @@ class RouterAgent:
         GROUP CONTEXT:
         {group_context}
         
+        HISTORICAL INTERACTION EVIDENCE (Past messages from this sender to this user):
+        {history_context}
+        
         Decide the action, message_type, provide a reason, confidence, and any evidence_message_ids ('none' for now).
         """
         
@@ -62,7 +66,7 @@ class RouterAgent:
             media_file = self.client.files.upload(file=media_path)
             contents_list.append(media_file)
 
-        # Call Gemini and force the output to match our Pydantic schema
+        # Call Gemini and force the output to match schema
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=contents_list,
@@ -88,19 +92,23 @@ def main():
         business_df = pd.read_csv("dataset/business_accounts.csv").set_index("business_id")
         images_df = pd.read_csv("dataset/images.csv").set_index("image_id")
         voice_df = pd.read_csv("dataset/voice_notes.csv").set_index("voice_note_id")
+        
+        # Load and merge history to get message text + user reactions
+        history_df = pd.read_csv("dataset/message_history.csv")
+        events_df = pd.read_csv("dataset/message_events.csv")
+        merged_history = pd.merge(history_df, events_df, on=['message_id', 'user_id'], how='left')
+        
     except FileNotFoundError as e:
         print(f"Error: Could not find dataset files. Make sure you are running from the project root. ({e})")
         return
 
     agent = RouterAgent()
     
-    # Test the first 15 messages to include audio and img
     print("\n--- Testing the Bouncer on the first 15 messages ---\n")
     
     for index, row in messages_df.head(15).iterrows():
         print(f"Processing {row['message_id']}...")
         
-        # Build Contexts safely
         user_context = "None"
         if pd.notna(row['user_id']) and row['user_id'] in users_df.index:
             user_context = str(users_df.loc[row['user_id']].to_dict())
@@ -113,6 +121,24 @@ def main():
         if pd.notna(row['group_id']) and row['group_id'] in groups_df.index:
             group_context = str(groups_df.loc[row['group_id']].to_dict())
 
+        # Build History Context
+        history_context = "None"
+        user_history = merged_history[merged_history['user_id'] == row['user_id']]
+        if pd.notna(row['business_id']):
+            relevant_hist = user_history[user_history['business_id'] == row['business_id']]
+        elif pd.notna(row['group_id']):
+            relevant_hist = user_history[user_history['group_id'] == row['group_id']]
+        else:
+            relevant_hist = user_history[user_history['sender_user_id'] == row['sender_user_id']]
+            
+        if not relevant_hist.empty:
+            recent_history = relevant_hist.tail(3)
+            hist_records = []
+            for _, h_row in recent_history.iterrows():
+                record = f"ID:{h_row['message_id']} | Text: '{str(h_row['message_text'])[:50]}...' | Opened:{h_row['message_opened']} | Muted:{h_row['muted_after_message']} | Dismissed:{h_row['notification_dismissed']}"
+                hist_records.append(record)
+            history_context = "\n".join(hist_records)
+
         # Resolve Media Path
         media_path = None
         if row['media_type'] == 'image' and pd.notna(row['media_id']):
@@ -124,12 +150,13 @@ def main():
 
         # Get the AI's decision
         try:
-            decision = agent.process_message(row, user_context, business_context, group_context, media_path)
+            decision = agent.process_message(row, user_context, business_context, group_context, history_context, media_path)
             
             print(f"  TEXT:   {str(row['message_text'])[:60]}...") 
             print(f"  MEDIA:  {media_path}")
             print(f"  ACTION: {decision['action'].upper()} (Type: {decision['message_type']})")
             print(f"  REASON: {decision['reason']}")
+            print(f"  EVIDENCE: {decision['evidence_message_ids']} (Confidence: {decision['confidence']})")
             print("-" * 50)
             
         except Exception as e:
