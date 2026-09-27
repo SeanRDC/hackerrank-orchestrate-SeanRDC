@@ -1,130 +1,160 @@
-# HackerRank Orchestrate
+<a id="readme-top"></a>
 
-Starter repository for the **HackerRank Orchestrate** 24-hour hackathon.
+<!-- PROJECT SHIELDS -->
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![JSON](https://img.shields.io/badge/JSON-000000?style=for-the-badge&logo=json&logoColor=white)](https://json.org)
+[![HackerRank](https://img.shields.io/badge/-HackerRank-2EC866?style=for-the-badge&logo=HackerRank&logoColor=white)](https://hackerrank.com)
 
-## Message Notification Router
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <h3 align="center">HackerRank Orchestrate AI Agent Challenge</h3>
 
-Build an AI-powered system for WhatsApp that decides which messages deserve immediate attention, which should wait, and which should be muted.
+  <p align="center">
+    A Python-based AI agent orchestration system built for the HackerRank Orchestrate coding challenge to process complex, multi-modal datasets and generate schema-validated JSON outputs.
+    <br />
+    <br />
+    <strong>Tags:</strong> <code>python</code>, <code>ai-agents</code>, <code>hackerrank</code>, <code>orchestration</code>, <code>llm</code>, <code>data-processing</code>, <code>multi-modal</code>, <code>json-validation</code>, <code>automation</code>, <code>etl</code>, <code>backend</code>, <code>api-integration</code>, <code>scripting</code>, <code>dataset-parsing</code>, <code>error-handling</code>
+  </p>
+</div>
 
-The system must reason over multimodal messages, including text messages, image posters/screenshots, and voice notes.
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#project-structure">Project Structure</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ol>
+</details>
 
-WhatsApp is noisy. A user can receive family chats, society notices, school updates, co-worker messages, business account promotions, image posters, voice notes, and scams in the same message stream. Treating every message the same creates two bad outcomes: important messages get missed, and unwanted or risky messages interrupt the user.
+<!-- ABOUT THE PROJECT -->
+## About The Project
 
-Read [`problem_statement.md`](./problem_statement.md) for the full task spec, input/output schema, allowed values, and submission format.
+This repository contains the solution for the HackerRank Orchestrate coding challenge. The system is designed to build and test AI agents capable of parsing unstructured and multi-modal data. It processes a complex provided dataset consisting of business accounts, daily notifications, group details, and media files (both audio and images) to extract, validate, and normalize information into a clean JSON structure. 
 
----
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Repository Layout
+### Built With
 
-```text
-.
-├── AGENTS.md                         # Rules for AI coding tools + transcript logging
-├── problem_statement.md              # Full challenge statement
-├── README.md                         # You are here
-└── dataset/
-    ├── messages.csv                  # Messages to route
-    ├── output.csv                    # Blank submission template
-    ├── sample_messages.csv           # Solved examples
-    ├── users.csv                     # User notification behavior
-    ├── groups.csv                    # Group metadata
-    ├── group_members.csv             # User-group relationships
-    ├── business_accounts.csv         # Business sender metadata
-    ├── user_business_history.csv     # User-business history
-    ├── message_history.csv           # Historical messages
-    ├── message_events.csv            # User reactions to historical messages
-    ├── images.csv                    # Image IDs and media file paths
-    ├── voice_notes.csv               # Voice note IDs and media file paths
-    ├── daily_notification_summary.csv
-    └── media/
-        ├── images/
-        └── audio/
+* [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- GETTING STARTED -->
+## Getting Started
+
+To get a local copy up and running, follow these steps.
+
+### Prerequisites
+
+* Python 3.10+
+* pip
+  ```sh
+  python -m pip install --upgrade pip
+  ```
+
+### Installation
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/SeanRDC/hackerrank-orchestrate.git
+   ```
+2. Install necessary Python packages
+   ```sh
+   pip install google-genai pandas python-dotenv
+   ```
+3. Set up your environment variables for the required LLM providers.
+    ```sh
+    GEMINI_API_KEY="your_api_key_here"
+    ```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- USAGE EXAMPLES -->
+## Usage
+
+To execute the main orchestration pipeline, run the primary Python script located in the `code` directory:
+
+```sh
+cd code
+python main.py
 ```
 
----
+The system will ingest the CSV records and media files from the `dataset` directory, process them through the configured AI agents defined in `AGENTS.md`, and output the validated results.
 
-## What You Need to Build
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-For every row in `dataset/messages.csv`, produce one row in `output.csv` with:
+<!-- ROADMAP -->
+## Roadmap
 
-| Column | Meaning |
-|---|---|
-| `message_id` | Incoming message ID |
-| `action` | One of `notify`, `digest`, or `mute` |
-| `message_type` | Best-fit message category |
-| `reason` | Short human-readable explanation |
-| `confidence` | Number from `0` to `1` |
-| `evidence_message_ids` | Historical message IDs used as evidence; write `none` if there is no useful evidence |
+- [x] Initialize project structure and dataset directories
+- [x] Configure base AI agent behaviors (`AGENTS.md`)
+- [x] Implement multi-modal parsing for audio/images
+- [x] Integrate CSV ingestion (`business_accounts.csv`, `groups.csv`, etc.)
+- [x] Build robust retry and schema-validation mechanisms in `main.py`
+- [x] Finalize and test HackerRank Orchestrate submission
 
-Your system should make personalized decisions using the provided message, user, group, business, media, and historical interaction data.
-For image and voice-note messages, `images.csv` and `voice_notes.csv` only provide file paths; your system should inspect the media files themselves.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
----
+<!-- PROJECT STRUCTURE -->
+## Project Structure
 
-## Suggested Workflow
+```text
+hackerrank-orchestrate-SeanRDC/
+├── .vscode/
+├── code/
+│   ├── README.md
+│   └── main.py
+├── dataset/
+│   ├── media/
+│   │   ├── audio/
+│   │   │   └── (vn_001.mp3 to vn_015.mp3)
+│   │   └── images/
+│   │       └── (img_001.jpg to img_026.jpg)
+│   ├── business_accounts.csv
+│   ├── daily_notification_summary.csv
+│   ├── group_members.csv
+│   ├── groups.csv
+│   ├── images.csv
+│   ├── message_events.csv
+│   ├── message_history.csv
+│   ├── messages.csv
+│   ├── output.csv
+│   ├── sample_messages.csv
+│   ├── user_business_history.csv
+│   ├── users.csv
+│   └── voice_notes.csv
+├── .gitignore
+├── AGENTS.md
+├── CLAUDE.md
+├── README.md
+├── problem_statement.md
+└── test_gemini.py
+```
 
-1. Inspect `dataset/sample_messages.csv` to understand the expected output format.
-2. Load `dataset/messages.csv` and all relevant context files.
-3. Build your routing system using any approach: LLMs, retrieval, rules, classifiers, agents, or hybrids.
-4. Write predictions to `output.csv`.
-5. Evaluate your approach on the solved sample rows before submitting.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-You may use any language or runtime. Python, JavaScript, and TypeScript are all reasonable choices.
+<!-- CONTACT -->
+## Contact
 
----
+Sean Rhani Jarin Dela Cruz
 
-## Requirements
+Project Link: [https://github.com/SeanRDC/hackerrank-orchestrate](https://github.com/SeanRDC/hackerrank-orchestrate) <br />
+LinkedIn Link: [https://www.linkedin.com/in/sean-rhani-dela-cruz-834573334/](https://www.linkedin.com/in/sean-rhani-dela-cruz-834573334/)
 
-Your solution must:
-
-- be runnable from the terminal
-- read the provided files from `dataset/`
-- produce a valid `output.csv`
-- include one prediction for every `message_id` in `dataset/messages.csv`
-- not use organizer-only files or hardcoded labels
-
-If you use API keys or secrets, read them from environment variables. Never hardcode secrets in the repo.
-
----
-
-## Evaluation
-
-Your `output.csv` will be compared against hidden ground-truth labels.
-
-The scoring will consider:
-
-- correctness of `action`
-- correctness of `message_type`
-- usefulness and consistency of `reason`
-- whether `evidence_message_ids` point to relevant historical messages
-- reasonable confidence calibration
-
-Strong systems will combine retrieval, structured metadata, behavioral history, safety checks, OCR/ASR handling, and contextual reasoning.
-
----
-
-## Chat Transcript Logging
-
-This repo includes an [`AGENTS.md`](./AGENTS.md) file for AI coding tools. It asks compatible tools to append conversation summaries to:
-
-| Platform | Path |
-|---|---|
-| macOS / Linux | `$HOME/hackerrank_orchestrate_august26/log.txt` |
-| Windows | `%USERPROFILE%\hackerrank_orchestrate_august26\log.txt` |
-
-Upload this log as your chat transcript at submission time. Do not paste secrets into the chat.
-
----
-
-## Submission
-
-Submit the following files as instructed by HackerRank:
-
-1. **Code zip**: full runnable solution, prompts/configs, README, and any evaluation files.
-2. **Predictions CSV**: final `output.csv` for all rows in `dataset/messages.csv`.
-3. **Chat transcript**: the `log.txt` described above.
-
-Before submitting, confirm:
-
-- `output.csv` has one row per row in `dataset/messages.csv`.
-- `output.csv` has the exact required columns in the exact required order.
-- Your runnable code and setup instructions are included in `code.zip`.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
