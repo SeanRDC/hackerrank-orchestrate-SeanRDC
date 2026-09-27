@@ -49,12 +49,6 @@ This repository contains the solution for the HackerRank Orchestrate coding chal
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Built With
-
-* [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 <!-- GETTING STARTED -->
 ## Getting Started
 
